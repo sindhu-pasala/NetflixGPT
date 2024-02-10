@@ -1,8 +1,10 @@
-import { signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useDispatch, useSelector } from "react-redux";
 import { auth } from "../utils/firebase";
-import { removeUser } from "../utils/userSlice";
+import { addUser, removeUser } from "../utils/userSlice";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { LOGO } from "../utils/constants";
 
 const Header = () => {
   const dispatch = useDispatch();
@@ -12,19 +14,34 @@ const Header = () => {
     signOut(auth)
       .then(() => {
         dispatch(removeUser());
-        navigate("/");
       })
-      .catch((error) => {
-        // An error happened.
-      });
+      .catch((error) => {});
   };
+  useEffect(() => {
+    let unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const { uid, email, displayName, photoURL } = user;
+        dispatch(
+          addUser({
+            uid: uid,
+            email: email,
+            displayName: displayName,
+            photoURL: photoURL,
+          })
+        );
+        navigate("/browse");
+      } else {
+        dispatch(removeUser());
+        navigate("/");
+      }
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
   return (
     <div className="absolute w-screen z-10 bg-gradient-to-b from-black flex justify-between p-4">
-      <img
-        className="w-60 px-10"
-        alt=""
-        src="https://cdn.cookielaw.org/logos/dd6b162f-1a32-456a-9cfe-897231c7763c/4345ea78-053c-46d2-b11e-09adaef973dc/Netflix_Logo_PMS.png"
-      ></img>
+      <img className="w-60 px-10" alt="" src={LOGO}></img>
       {user && (
         <div className="flex">
           <img className="h-12 w-12" src={user?.photoURL} alt="logo" />
